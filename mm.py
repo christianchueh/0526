@@ -142,44 +142,92 @@ with col1:
 
             with st.container(border=True):
 
-                st.write(f"### {row['title']}")
-                st.caption(f"👤 負責人：{row['owner']}")
+    # 顯示卡片
+    st.write(f"### {row['title']}")
+    st.caption(f"👤 負責人：{row['owner']}")
+    st.caption(f"📌 狀態：{row['status']}")
 
-                # 狀態切換
-                new_status = st.selectbox(
-                    "變更狀態",
-                    ["To Do", "In Progress", "Done"],
-                    index=["To Do", "In Progress", "Done"].index(row["status"]),
-                    key=f"status_{idx}"
-                )
+    # =====================================
+    # 狀態快速切換
+    # =====================================
 
-                # 更新狀態
-                if new_status != row["status"]:
+    new_status = st.selectbox(
+        "變更狀態",
+        ["To Do", "In Progress", "Done"],
+        index=["To Do", "In Progress", "Done"].index(row["status"]),
+        key=f"status_{idx}"
+    )
 
-                    df.at[idx, "status"] = new_status
+    if new_status != row["status"]:
 
-                    conn.update(
-                        worksheet="Tasks",
-                        data=df
-                    )
+        df.at[idx, "status"] = new_status
 
-                    st.success("✅ 狀態已更新")
+        conn.update(
+            worksheet="Tasks",
+            data=df
+        )
 
-                    st.rerun()
+        st.success("✅ 狀態已更新")
 
-                # 刪除按鈕
-                if st.button("🗑️ 刪除任務", key=f"delete_{idx}"):
+        st.rerun()
 
-                    df = df.drop(idx)
+    # =====================================
+    # 編輯卡片區塊
+    # =====================================
 
-                    conn.update(
-                        worksheet="Tasks",
-                        data=df
-                    )
+    with st.expander("✏️ 編輯任務"):
 
-                    st.warning("任務已刪除")
+        edit_title = st.text_input(
+            "任務名稱",
+            value=row["title"],
+            key=f"title_{idx}"
+        )
 
-                    st.rerun()
+        edit_owner = st.text_input(
+            "負責人",
+            value=row["owner"],
+            key=f"owner_{idx}"
+        )
+
+        edit_status = st.selectbox(
+            "任務狀態",
+            ["To Do", "In Progress", "Done"],
+            index=["To Do", "In Progress", "Done"].index(row["status"]),
+            key=f"edit_status_{idx}"
+        )
+
+        # 儲存修改
+        if st.button("💾 儲存修改", key=f"save_{idx}"):
+
+            df.at[idx, "title"] = edit_title
+            df.at[idx, "owner"] = edit_owner
+            df.at[idx, "status"] = edit_status
+
+            conn.update(
+                worksheet="Tasks",
+                data=df
+            )
+
+            st.success("✅ 任務已更新")
+
+            st.rerun()
+
+    # =====================================
+    # 刪除任務
+    # =====================================
+
+    if st.button("🗑️ 刪除任務", key=f"delete_{idx}"):
+
+        df = df.drop(idx)
+
+        conn.update(
+            worksheet="Tasks",
+            data=df
+        )
+
+        st.warning("任務已刪除")
+
+        st.rerun()
 
     else:
         st.info("目前沒有待辦任務")
