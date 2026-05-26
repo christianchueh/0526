@@ -21,6 +21,7 @@ st.write("###  進入 Python 迴圈自動化點名現場：")
 for idx, row in todo_df.iterrows(): 
 
     # 每一圈，我們用一個小紅框（st.error）來代表一次巡迴 
+    st.write(row)
 
     st.error(f" 迴圈巡邏：目前點名點到了第 {idx} 行的任務：") 
 
