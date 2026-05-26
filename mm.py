@@ -177,68 +177,80 @@ def render_cards(task_df):
                 st.rerun()
 
             # ==========================
+            # 操作按鈕列
+            # ==========================
+
+            btn_col1, btn_col2 = st.columns(2)
+
+            # ==========================
             # 編輯任務
             # ==========================
 
-            with st.expander("✏️ 編輯任務"):
+            with btn_col1:
 
-                edit_title = st.text_input(
-                    "任務名稱",
-                    value=row["title"],
-                    key=f"title_{idx}"
-                )
+                with st.popover("✏️ 編輯任務"):
 
-                edit_owner = st.text_input(
-                    "負責人",
-                    value=row["owner"],
-                    key=f"owner_{idx}"
-                )
+                    edit_title = st.text_input(
+                        "任務名稱",
+                        value=row["title"],
+                        key=f"title_{idx}"
+                    )
 
-                edit_status = st.selectbox(
-                    "任務狀態",
-                    status_options,
-                    index=status_options.index(row["status"]),
-                    key=f"edit_status_{idx}"
-                )
+                    edit_owner = st.text_input(
+                        "負責人",
+                        value=row["owner"],
+                        key=f"owner_{idx}"
+                    )
 
-                # 儲存修改
+                    edit_status = st.selectbox(
+                        "任務狀態",
+                        status_options,
+                        index=status_options.index(row["status"]),
+                        key=f"edit_status_{idx}"
+                    )
+
+                    # 儲存修改
+                    if st.button(
+                        "💾 儲存修改",
+                        key=f"save_{idx}",
+                        use_container_width=True
+                    ):
+
+                        df.at[idx, "title"] = edit_title
+                        df.at[idx, "owner"] = edit_owner
+                        df.at[idx, "status"] = edit_status
+
+                        conn.update(
+                            worksheet="Tasks",
+                            data=df
+                        )
+
+                        st.success("✅ 任務已更新")
+
+                        st.rerun()
+
+            # ==========================
+            # 刪除任務
+            # ==========================
+
+            with btn_col2:
+
                 if st.button(
-                    "💾 儲存修改",
-                    key=f"save_{idx}"
+                    "🗑️ 刪除任務",
+                    key=f"delete_{idx}",
+                    use_container_width=True
                 ):
 
-                    df.at[idx, "title"] = edit_title
-                    df.at[idx, "owner"] = edit_owner
-                    df.at[idx, "status"] = edit_status
+                    df = df.drop(idx)
 
                     conn.update(
                         worksheet="Tasks",
                         data=df
                     )
 
-                    st.success("✅ 任務已成功更新")
+                    st.warning("⚠️ 任務已刪除")
 
                     st.rerun()
-
-            # ==========================
-            # 刪除任務
-            # ==========================
-
-            if st.button(
-                "🗑️ 刪除任務",
-                key=f"delete_{idx}"
-            ):
-
-                df = df.drop(idx)
-
-                conn.update(
-                    worksheet="Tasks",
-                    data=df
-                )
-
-                st.warning("⚠️ 任務已刪除")
-
-                st.rerun()
 
 # ==========================================
 # Trello 三欄
