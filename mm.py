@@ -25,6 +25,6 @@ with col3:
     st.markdown("### Done (已完成)")
     st.write("這裡未來要放『已完成』的卡片")
     
-with col3:
+with col4:
     st.markdown("### Backlog (後備任務)")
     st.write("這裡未來要放『後備任務』的卡片")
