@@ -125,7 +125,8 @@ st.divider()
 # ==========================================
 
 def render_cards(task_df):
-
+    
+    global df
     if task_df.empty:
         st.info("目前沒有任務")
         return
@@ -241,7 +242,7 @@ def render_cards(task_df):
                     use_container_width=True
                 ):
 
-                    df = df.drop(idx)
+                    df = df.drop(idx).reset_index(drop=True)
 
                     conn.update(
                         worksheet="Tasks",
