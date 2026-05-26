@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import uuid
 from streamlit_gsheets import GSheetsConnection
 
 # ==========================================
@@ -12,7 +13,7 @@ st.set_page_config(
 )
 
 st.title("📋 Trello 雲端任務管理系統")
-st.caption("edit by 闕河正 | Ultimate CRUD Version")
+st.caption("Ultimate CRUD Version")
 
 # ==========================================
 # Google Sheets 連線
@@ -28,14 +29,31 @@ df = conn.read(
     ttl=0
 )
 
-# 若試算表為空
+# ==========================================
+# 初始化空資料表
+# ==========================================
+
 if df.empty:
+
     df = pd.DataFrame(
-        columns=["title", "status", "owner"]
+        columns=[
+            "task_id",
+            "title",
+            "status",
+            "owner"
+        ]
     )
 
+# 舊資料沒有 task_id 時自動補上
+if "task_id" not in df.columns:
+
+    df["task_id"] = [
+        str(uuid.uuid4())
+        for _ in range(len(df))
+    ]
+
 # ==========================================
-# 新增任務區塊
+# 新增任務
 # ==========================================
 
 st.write("## ✨ 新增任務")
@@ -73,6 +91,7 @@ if submit_btn:
     if new_title and new_owner:
 
         new_data = {
+            "task_id": str(uuid.uuid4()),
             "title": new_title,
             "status": new_status,
             "owner": new_owner
@@ -80,17 +99,17 @@ if submit_btn:
 
         new_row = pd.DataFrame([new_data])
 
-        updated_df = pd.concat(
+        df = pd.concat(
             [df, new_row],
             ignore_index=True
         )
 
         conn.update(
             worksheet="Tasks",
-            data=updated_df
+            data=df
         )
 
-        st.success("🎉 任務已成功新增！")
+        st.success("🎉 任務已新增")
 
         st.rerun()
 
@@ -125,31 +144,39 @@ st.divider()
 # ==========================================
 
 def render_cards(task_df):
-    
+
     global df
+
     if task_df.empty:
+
         st.info("目前沒有任務")
+
         return
 
     for idx, row in task_df.iterrows():
 
+        task_id = row["task_id"]
+
         with st.container(border=True):
 
-            # ==========================
+            # ==================================
             # 卡片標題
-            # ==========================
+            # ==================================
 
             if row["status"] == "Done":
+
                 st.write(f"### ~~{row['title']}~~")
+
             else:
+
                 st.write(f"### {row['title']}")
 
             st.caption(f"👤 負責人：{row['owner']}")
             st.caption(f"📌 狀態：{row['status']}")
 
-            # ==========================
-            # 快速狀態切換
-            # ==========================
+            # ==================================
+            # 狀態切換
+            # ==================================
 
             status_options = [
                 "To Do",
@@ -161,7 +188,7 @@ def render_cards(task_df):
                 "變更狀態",
                 status_options,
                 index=status_options.index(row["status"]),
-                key=f"status_{idx}"
+                key=f"status_{task_id}"
             )
 
             if new_status != row["status"]:
@@ -177,43 +204,45 @@ def render_cards(task_df):
 
                 st.rerun()
 
-            # ==========================
+            # ==================================
             # 操作按鈕列
-            # ==========================
+            # ==================================
 
             btn_col1, btn_col2 = st.columns(2)
 
-            # ==========================
+            # ==================================
             # 編輯任務
-            # ==========================
+            # ==================================
 
             with btn_col1:
 
-                with st.popover("✏️ 編輯任務"):
+                with st.popover(
+                    "✏️ 編輯任務",
+                    use_container_width=True
+                ):
 
                     edit_title = st.text_input(
                         "任務名稱",
                         value=row["title"],
-                        key=f"title_{idx}"
+                        key=f"title_{task_id}"
                     )
 
                     edit_owner = st.text_input(
                         "負責人",
                         value=row["owner"],
-                        key=f"owner_{idx}"
+                        key=f"owner_{task_id}"
                     )
 
                     edit_status = st.selectbox(
                         "任務狀態",
                         status_options,
                         index=status_options.index(row["status"]),
-                        key=f"edit_status_{idx}"
+                        key=f"edit_status_{task_id}"
                     )
 
-                    # 儲存修改
                     if st.button(
                         "💾 儲存修改",
-                        key=f"save_{idx}",
+                        key=f"save_{task_id}",
                         use_container_width=True
                     ):
 
@@ -230,15 +259,15 @@ def render_cards(task_df):
 
                         st.rerun()
 
-            # ==========================
+            # ==================================
             # 刪除任務
-            # ==========================
+            # ==================================
 
             with btn_col2:
 
                 if st.button(
                     "🗑️ 刪除任務",
-                    key=f"delete_{idx}",
+                    key=f"delete_{task_id}",
                     use_container_width=True
                 ):
 
