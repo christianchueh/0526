@@ -1,172 +1,43 @@
 import streamlit as st
 import pandas as pd
-import uuid
-from streamlit_gsheets import GSheetsConnection
+
+# 假設這是你的連線物件
+# conn = st.connection("gsheets", type=GSheetsConnection)
 
 # ==========================================
-# 頁面設定
+# 1. 初始化：確保 df 存在於 session_state 中
 # ==========================================
-
-st.set_page_config(
-    page_title="Trello 任務看板",
-    layout="wide"
-)
-
-st.title("📋 Trello 雲端任務管理系統")
-st.caption("Ultimate CRUD Version")
-
-# ==========================================
-# Google Sheets 連線
-# ==========================================
-
-conn = st.connection(
-    "gsheets",
-    type=GSheetsConnection
-)
-
-df = conn.read(
-    worksheet="Tasks",
-    ttl=0
-)
+if "df" not in st.session_state:
+    # 第一次載入時從 Google Sheets 讀取
+    # st.session_state.df = conn.read(worksheet="Tasks")
+    
+    # 範例測試資料（實際使用請換回上方連線讀取）
+    st.session_state.df = pd.DataFrame([
+        {"task_id": 1, "title": "任務一", "owner": "小明", "status": "To Do"},
+        {"task_id": 2, "title": "任務二", "owner": "小華", "status": "In Progress"}
+    ])
 
 # ==========================================
-# 初始化空資料表
+# 2. 渲染卡片的函式
 # ==========================================
-
-if df.empty:
-
-    df = pd.DataFrame(
-        columns=[
-            "task_id",
-            "title",
-            "status",
-            "owner"
-        ]
-    )
-
-# 舊資料沒有 task_id 時自動補上
-if "task_id" not in df.columns:
-
-    df["task_id"] = [
-        str(uuid.uuid4())
-        for _ in range(len(df))
-    ]
-
-# ==========================================
-# 新增任務
-# ==========================================
-
-st.write("## ✨ 新增任務")
-
-with st.form("task_form", clear_on_submit=True):
-
-    c1, c2, c3 = st.columns([2, 1, 1])
-
-    with c1:
-        new_title = st.text_input(
-            "📌 任務名稱",
-            placeholder="輸入任務名稱..."
-        )
-
-    with c2:
-        new_status = st.selectbox(
-            "📍 狀態",
-            ["To Do", "In Progress", "Done"]
-        )
-
-    with c3:
-        new_owner = st.text_input(
-            "👤 負責人",
-            placeholder="誰來負責..."
-        )
-
-    submit_btn = st.form_submit_button("✅ 新增任務")
-
-# ==========================================
-# 新增任務邏輯
-# ==========================================
-
-if submit_btn:
-
-    if new_title and new_owner:
-
-        new_data = {
-            "task_id": str(uuid.uuid4()),
-            "title": new_title,
-            "status": new_status,
-            "owner": new_owner
-        }
-
-        new_row = pd.DataFrame([new_data])
-
-        df = pd.concat(
-            [df, new_row],
-            ignore_index=True
-        )
-
-        conn.update(
-            worksheet="Tasks",
-            data=df
-        )
-
-        st.success("🎉 任務已新增")
-
-        st.rerun()
-
-    else:
-        st.warning("⚠️ 任務名稱與負責人不可空白")
-
-st.divider()
-
-# ==========================================
-# 統計區塊
-# ==========================================
-
-todo_count = len(df[df["status"] == "To Do"])
-ip_count = len(df[df["status"] == "In Progress"])
-done_count = len(df[df["status"] == "Done"])
-
-m1, m2, m3 = st.columns(3)
-
-with m1:
-    st.metric("📝 待辦", todo_count)
-
-with m2:
-    st.metric("🚧 執行中", ip_count)
-
-with m3:
-    st.metric("✅ 已完成", done_count)
-
-st.divider()
-
-# ==========================================
-# 卡片渲染函式
-# ==========================================
-
 def render_cards(task_df):
-
-    global df
-
     if task_df.empty:
         st.info("目前沒有任務")
         return
 
     for _, row in task_df.iterrows():
-
         task_id = row["task_id"]
 
         with st.container(border=True):
-
             st.write(f"### {row['title']}")
             st.caption(f"👤 負責人：{row['owner']}")
             st.caption(f"📌 狀態：{row['status']}")
 
-            # ======================
-            # 狀態更新（用 task_id 找原 df）
-            # ======================
-
             status_options = ["To Do", "In Progress", "Done"]
 
+            # ======================
+            # 狀態更新
+            # ======================
             new_status = st.selectbox(
                 "變更狀態",
                 status_options,
@@ -175,130 +46,49 @@ def render_cards(task_df):
             )
 
             if new_status != row["status"]:
-
-                df.loc[df["task_id"] == task_id, "status"] = new_status
-
-                conn.update(
-                    worksheet="Tasks",
-                    data=df
-                )
-
+                # 直接修改 session_state 裡的 df
+                idx = st.session_state.df[st.session_state.df["task_id"] == task_id].index
+                st.session_state.df.loc[idx, "status"] = new_status
+                
+                # 同步回雲端
+                conn.update(worksheet="Tasks", data=st.session_state.df)
                 st.rerun()
 
             # ======================
             # 編輯
             # ======================
-
             with st.popover("✏️ 編輯"):
-
-                edit_title = st.text_input(
-                    "任務名稱",
-                    value=row["title"],
-                    key=f"title_{task_id}"
-                )
-
-                edit_owner = st.text_input(
-                    "負責人",
-                    value=row["owner"],
-                    key=f"owner_{task_id}"
-                )
-
-                edit_status = st.selectbox(
-                    "狀態",
-                    status_options,
-                    index=status_options.index(row["status"]),
-                    key=f"edit_status_{task_id}"
-                )
+                edit_title = st.text_input("任務名稱", value=row["title"], key=f"title_{task_id}")
+                edit_owner = st.text_input("負責人", value=row["owner"], key=f"owner_{task_id}")
+                edit_status = st.selectbox("狀態", status_options, index=status_options.index(row["status"]), key=f"edit_status_{task_id}")
 
                 if st.button("💾 儲存", key=f"save_{task_id}"):
-
-                    df.loc[df["task_id"] == task_id, "title"] = edit_title
-                    df.loc[df["task_id"] == task_id, "owner"] = edit_owner
-                    df.loc[df["task_id"] == task_id, "status"] = edit_status
-
-                    conn.update(
-                        worksheet="Tasks",
-                        data=df
-                    )
-
+                    idx = st.session_state.df[st.session_state.df["task_id"] == task_id].index
+                    st.session_state.df.loc[idx, "title"] = edit_title
+                    st.session_state.df.loc[idx, "owner"] = edit_owner
+                    st.session_state.df.loc[idx, "status"] = edit_status
+                    
+                    conn.update(worksheet="Tasks", data=st.session_state.df)
                     st.rerun()
 
             # ======================
-            # 刪除（修復核心）
+            # 刪除（已修復）
             # ======================
-
             if st.button("🗑️ 刪除", key=f"delete_{task_id}"):
-
-                df = df[df["task_id"] != task_id].reset_index(drop=True)
-
+                # 1. 篩選掉被刪除的資料，更新 session_state
+                st.session_state.df = st.session_state.df[st.session_state.df["task_id"] != task_id].reset_index(drop=True)
+                
+                # 2. 將最新的正確資料寫回 Google Sheets
                 conn.update(
                     worksheet="Tasks",
-                    data=df
+                    data=st.session_state.df
                 )
-
+                
+                # 3. 強制刷新頁面，重新渲染
                 st.rerun()
 
 # ==========================================
-# Trello 三欄
+# 3. 主程式呼叫
 # ==========================================
-
-st.write("## 📊 Trello 任務看板")
-
-col1, col2, col3 = st.columns(3)
-
-# ==========================================
-# To Do
-# ==========================================
-
-with col1:
-
-    st.markdown(
-        """
-        ### <span style='color:red'>
-        🔴 To Do（待辦）
-        </span>
-        """,
-        unsafe_allow_html=True
-    )
-
-    todo_df = df[df["status"] == "To Do"]
-
-    render_cards(todo_df)
-
-# ==========================================
-# In Progress
-# ==========================================
-
-with col2:
-
-    st.markdown(
-        """
-        ### <span style='color:orange'>
-        🟠 In Progress（執行中）
-        </span>
-        """,
-        unsafe_allow_html=True
-    )
-
-    ip_df = df[df["status"] == "In Progress"]
-
-    render_cards(ip_df)
-
-# ==========================================
-# Done
-# ==========================================
-
-with col3:
-
-    st.markdown(
-        """
-        ### <span style='color:green'>
-        🟢 Done（已完成）
-        </span>
-        """,
-        unsafe_allow_html=True
-    )
-
-    done_df = df[df["status"] == "Done"]
-
-    render_cards(done_df)
+# 傳入當前最新的 session_state 資料
+render_cards(st.session_state.df)
