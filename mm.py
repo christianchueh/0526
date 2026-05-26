@@ -1,28 +1,45 @@
-import streamlit as st
+import streamlit as st 
 
-# 1. 網頁初始化設定（必須放在程式碼第一行）
-# layout="wide" 會把網頁兩邊的留白填滿，變成寬螢幕，最適合看多欄位的看板
-st.set_page_config(layout="wide")
+from streamlit_gsheets import GSheetsConnection
 
-st.title("階段一：Trello 畫布空間規劃測試")
-st.caption("授權標註：edit by 闕河正 | 專屬資淺初學者講義")
+st.set_page_config(layout="wide") 
+
+st.title(" 階段三：外星文濾網分流與空間歸隊測試") 
+
+st.caption("授權標註：edit by 闕河正")
+
+conn = st.connection("gsheets", type=GSheetsConnection) 
+
+df = conn.read(worksheet="Tasks", ttl="0")
 
 st.write("---")
 
-# 2. 呼叫 st.columns(3)，在網頁橫向切出三個一模一樣寬度的大直欄變數
 col1, col2, col3 = st.columns(3)
 
-# 3. 運用 with 語法，像填空一樣把文字塞進對應的直欄空間裡
-with col1:
-    st.markdown("### To Do (待辦)")
-    st.write("這裡未來要放『待辦事項』的卡片")
-    if str(df.loc[0 , "status"]) == "To Do":
-        st.write(df.loc[0 , title])
+with col1: 
 
-with col2:
-    st.markdown("### In Progress (執行中)")
-    st.write("這裡未來要放『執行中』的卡片")
+    st.markdown("###  To Do") 
 
-with col3:
-    st.markdown("### Done (已完成)")
-    st.write("這裡未來要放『已完成』的卡片")
+    #  內層做濾網，外層做篩選：只抓出狀態為 To Do 的小表格 
+
+    todo_df = df[df["status"] == "To Do"] # 把它印在左邊這欄 st.dataframe(todo_df)
+
+with col2: 
+
+    st.markdown("###  In Progress") 
+
+    #  只抓出狀態為 In Progress 的小表格 
+
+    ip_df = df[df["status"] == "In Progress"] 
+
+    st.dataframe(ip_df)
+
+with col3: 
+
+    st.markdown("###  Done") 
+
+    #  只抓出狀態為 Done 的小表格 
+
+    done_df = df[df["status"] == "Done"] 
+
+    st.dataframe(done_df)
