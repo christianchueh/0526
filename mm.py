@@ -1,12 +1,17 @@
 import streamlit as st
 import pandas as pd
+from streamlit_gsheets import GSheetsConnection
 
-# 假設這是你的 Google Sheets 連線物件
-# conn = st.connection("gsheets", type=GSheetsConnection)
+# ==========================================
+# 0. 初始化 Google Sheets 連線（修復 NameError 核心）
+# ==========================================
+
+# 建立與 Google Sheets 的連線物件（請確保你的 .streamlit/secrets.toml 設定正確）
+conn = st.connection("gsheets", type=GSheetsConnection)
 
 
 # ==========================================
-# 核心邏輯：初始化資料並存入 session_state
+# 1. 初始化資料並存入 session_state
 # ==========================================
 
 if "df" not in st.session_state:
@@ -16,7 +21,7 @@ if "df" not in st.session_state:
 
 
 # ==========================================
-# 卡片渲染函式（保留你原汁原味的漂亮排版）
+# 2. 卡片渲染函式（保留你原汁原味的漂亮排版）
 # ==========================================
 
 def render_cards(task_df):
@@ -119,7 +124,7 @@ def render_cards(task_df):
 
 
 # ==========================================
-# 主程式呼叫：傳入最新的暫存資料
+# 3. 主程式呼叫：傳入最新的暫存資料
 # ==========================================
 
 render_cards(st.session_state.df)
