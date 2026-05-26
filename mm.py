@@ -16,7 +16,7 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown("### To Do (待辦)")
     st.write("這裡未來要放『待辦事項』的卡片")
-    if df.loc[0 , 'status'] == "To Do":
+    if str(df.loc[0 , "status"]) == "To Do":
         st.write(df.loc[0 , title])
 
 with col2:
