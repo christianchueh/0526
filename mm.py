@@ -64,7 +64,7 @@ if st.button("點我！自動新增一筆資料到雲端"):
 
     # 裡面的 Key (title, status, owner) 必須和我們在 Excel 第一列手動打的字分毫不差
 
-    new_data = {"title": "網頁新增的任務", "status": "To Do", "owner": "Python機器人"}
+    new_data = {"title": "測試新增的任務", "status": "To Do", "owner": "Python機器人"}
 
     # 第 10 行：把這個字典轉換成 Pandas 認得的單行表格物件（DataFrame）
 
