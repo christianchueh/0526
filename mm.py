@@ -148,41 +148,24 @@ def render_cards(task_df):
     global df
 
     if task_df.empty:
-
         st.info("目前沒有任務")
-
         return
 
-    for idx, row in task_df.iterrows():
+    for _, row in task_df.iterrows():
 
         task_id = row["task_id"]
 
         with st.container(border=True):
 
-            # ==================================
-            # 卡片標題
-            # ==================================
-
-            if row["status"] == "Done":
-
-                st.write(f"### ~~{row['title']}~~")
-
-            else:
-
-                st.write(f"### {row['title']}")
-
+            st.write(f"### {row['title']}")
             st.caption(f"👤 負責人：{row['owner']}")
             st.caption(f"📌 狀態：{row['status']}")
 
-            # ==================================
-            # 狀態切換
-            # ==================================
+            # ======================
+            # 狀態更新（用 task_id 找原 df）
+            # ======================
 
-            status_options = [
-                "To Do",
-                "In Progress",
-                "Done"
-            ]
+            status_options = ["To Do", "In Progress", "Done"]
 
             new_status = st.selectbox(
                 "變更狀態",
@@ -193,94 +176,67 @@ def render_cards(task_df):
 
             if new_status != row["status"]:
 
-                df.at[idx, "status"] = new_status
+                df.loc[df["task_id"] == task_id, "status"] = new_status
 
                 conn.update(
                     worksheet="Tasks",
                     data=df
                 )
 
-                st.success("✅ 狀態已更新")
-
                 st.rerun()
 
-            # ==================================
-            # 操作按鈕列
-            # ==================================
+            # ======================
+            # 編輯
+            # ======================
 
-            btn_col1, btn_col2 = st.columns(2)
+            with st.popover("✏️ 編輯"):
 
-            # ==================================
-            # 編輯任務
-            # ==================================
+                edit_title = st.text_input(
+                    "任務名稱",
+                    value=row["title"],
+                    key=f"title_{task_id}"
+                )
 
-            with btn_col1:
+                edit_owner = st.text_input(
+                    "負責人",
+                    value=row["owner"],
+                    key=f"owner_{task_id}"
+                )
 
-                with st.popover(
-                    "✏️ 編輯任務",
-                    use_container_width=True
-                ):
+                edit_status = st.selectbox(
+                    "狀態",
+                    status_options,
+                    index=status_options.index(row["status"]),
+                    key=f"edit_status_{task_id}"
+                )
 
-                    edit_title = st.text_input(
-                        "任務名稱",
-                        value=row["title"],
-                        key=f"title_{task_id}"
-                    )
+                if st.button("💾 儲存", key=f"save_{task_id}"):
 
-                    edit_owner = st.text_input(
-                        "負責人",
-                        value=row["owner"],
-                        key=f"owner_{task_id}"
-                    )
-
-                    edit_status = st.selectbox(
-                        "任務狀態",
-                        status_options,
-                        index=status_options.index(row["status"]),
-                        key=f"edit_status_{task_id}"
-                    )
-
-                    if st.button(
-                        "💾 儲存修改",
-                        key=f"save_{task_id}",
-                        use_container_width=True
-                    ):
-
-                        df.at[idx, "title"] = edit_title
-                        df.at[idx, "owner"] = edit_owner
-                        df.at[idx, "status"] = edit_status
-
-                        conn.update(
-                            worksheet="Tasks",
-                            data=df
-                        )
-
-                        st.success("✅ 任務已更新")
-
-                        st.rerun()
-
-            # ==================================
-            # 刪除任務
-            # ==================================
-
-            with btn_col2:
-
-                if st.button(
-                    "🗑️ 刪除任務",
-                    key=f"delete_{task_id}",
-                    use_container_width=True
-                ):
-
-                    df = df.drop(idx).reset_index(drop=True)
+                    df.loc[df["task_id"] == task_id, "title"] = edit_title
+                    df.loc[df["task_id"] == task_id, "owner"] = edit_owner
+                    df.loc[df["task_id"] == task_id, "status"] = edit_status
 
                     conn.update(
                         worksheet="Tasks",
                         data=df
                     )
 
-                    st.warning("⚠️ 任務已刪除")
-
                     st.rerun()
+
+            # ======================
+            # 刪除（修復核心）
+            # ======================
+
+            if st.button("🗑️ 刪除", key=f"delete_{task_id}"):
+
+                df = df[df["task_id"] != task_id].reset_index(drop=True)
+
+                conn.update(
+                    worksheet="Tasks",
+                    data=df
+                )
+
+                st.rerun()
 
 # ==========================================
 # Trello 三欄
